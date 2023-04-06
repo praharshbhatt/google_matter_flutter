@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/android.iml" filepath="$PROJECT_DIR$/.idea/modules/android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/android.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/android.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/android.app.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/android.app.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/android.app.main.iml" filepath="$PROJECT_DIR$/.idea/modules/app/android.app.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/android.app.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/app/android.app.unitTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-1271144414/android.google_matter_flutter.iml" filepath="$PROJECT_DIR$/.idea/modules/-1271144414/android.google_matter_flutter.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-1271144414/android.google_matter_flutter.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/-1271144414/android.google_matter_flutter.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-1271144414/android.google_matter_flutter.main.iml" filepath="$PROJECT_DIR$/.idea/modules/-1271144414/android.google_matter_flutter.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/-1271144414/android.google_matter_flutter.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/-1271144414/android.google_matter_flutter.unitTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/1578589790/android.shared_preferences_android.iml" filepath="$PROJECT_DIR$/.idea/modules/1578589790/android.shared_preferences_android.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/1578589790/android.shared_preferences_android.androidTest.iml" filepath="$PROJECT_DIR$/.idea/modules/1578589790/android.shared_preferences_android.androidTest.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/1578589790/android.shared_preferences_android.main.iml" filepath="$PROJECT_DIR$/.idea/modules/1578589790/android.shared_preferences_android.main.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/1578589790/android.shared_preferences_android.unitTest.iml" filepath="$PROJECT_DIR$/.idea/modules/1578589790/android.shared_preferences_android.unitTest.iml" />
+    </modules>
+  </component>
+</project>

@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="Gradle: C (1)">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../../android/third_party/connectedhomeip/libs/AndroidPlatform.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
