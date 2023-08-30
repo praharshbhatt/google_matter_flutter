@@ -24,4 +24,11 @@ class MethodChannelGoogleMatterFlutter extends GoogleMatterFlutterPlatform {
     ]);
     return deviceData;
   }
+
+  Future<bool?> shareDevice(
+      int productId, int vendorId, int discriminator, int passCode) async {
+    final succeed = await methodChannel.invokeMethod<bool>(
+        'shareDevice', [productId, vendorId, discriminator, passCode]);
+    return succeed;
+  }
 }

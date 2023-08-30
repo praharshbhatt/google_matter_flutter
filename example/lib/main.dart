@@ -1,8 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'dart:async';
-
 import 'package:google_matter_flutter/google_matter_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -112,6 +111,43 @@ class _MyAppState extends State<MyApp> {
                                 setState(() {});
                               },
                               icon: const Icon(Icons.delete),
+                            ),
+                            IconButton(
+                              onPressed: () async {
+                                // Delete this device
+                                TextEditingController pinCodeController =
+                                    TextEditingController();
+                                await showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                          content: Column(
+                                            children: [
+                                              Text("PASSCODE"),
+                                              TextField(
+                                                controller: pinCodeController,
+                                              )
+                                            ],
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                                onPressed: () {
+                                                  Navigator.of(context).pop();
+                                                },
+                                                child: Text("Cancel")),
+                                            TextButton(
+                                                onPressed: () {
+                                                  Navigator.of(context).pop();
+                                                },
+                                                child: Text("SHARE")),
+                                          ],
+                                        ));
+                                try {
+                                  await shareMatterDevice(snapshot.data![index],
+                                      int.parse(pinCodeController.text));
+                                } catch (_) {}
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.share),
                             )
                           ],
                         ),
@@ -173,5 +209,10 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
     );
+  }
+
+  shareMatterDevice(MatterDevice matterDevice, int passCode) async {
+    await _googleMatterFlutterPlugin.shareDevice(matterDevice.deviceId,
+        matterDevice.vendorId, matterDevice.describeContents, passCode);
   }
 }

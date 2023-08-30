@@ -4,11 +4,18 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.home.matter.Matter
 import com.google.android.gms.home.matter.commissioning.CommissioningRequest
 import com.google.android.gms.home.matter.commissioning.CommissioningResult
+import com.google.android.gms.home.matter.commissioning.CommissioningWindow
+import com.google.android.gms.home.matter.commissioning.ShareDeviceRequest
+import com.google.android.gms.home.matter.common.DeviceDescriptor
+import com.google.android.gms.home.matter.common.Discriminator
+import com.google.android.gms.home.matter.common.NetworkLocation
 import com.google.google_matter_flutter.google_matter_flutter.chip.ChipClient
 import com.google.google_matter_flutter.google_matter_flutter.chip.ClustersHelper
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -20,6 +27,36 @@ class GoogleMatter(
     private val methodCallResult: MethodChannel.Result
 ) {
     @RequiresApi(Build.VERSION_CODES.O_MR1)
+    fun shareDevice( @ApplicationContext context: Context,
+                            productId: Int,
+                     setVendorId: Int,
+                     discriminator : Int ,
+                    passCode : Long ) {
+        val shareDeviceRequest =
+            ShareDeviceRequest.builder()
+                .setDeviceDescriptor(DeviceDescriptor.builder().setProductId(productId).setVendorId(setVendorId).build())
+                .setCommissioningWindow(
+                    CommissioningWindow.builder()
+                        .setDiscriminator(Discriminator.forLongValue(discriminator))
+                        .setPasscode(passCode)
+                        .setWindowOpenMillis(SystemClock.elapsedRealtime())
+                        .setDurationSeconds(180L)
+                        .build())
+                .build()
+        Matter.getCommissioningClient(activity)
+            .shareDevice(shareDeviceRequest)
+            .addOnSuccessListener { result ->
+                methodCallResult.success(true)
+            }
+            .addOnFailureListener { error ->
+                methodCallResult.error("${error.message}", "${error.message}", error)
+            }
+
+
+
+
+    }
+    @RequiresApi(Build.VERSION_CODES.O_MR1)
     fun commissionDevice() {
         // Register the commissioningLauncher here
         print("Starting CommissioningRequest...")
@@ -29,6 +66,7 @@ class GoogleMatter(
                 AppCommissioningService::class.java
             )
         ).build()
+
         Matter.getCommissioningClient(activity)
             .commissionDevice(request)
             .addOnSuccessListener { intentBuilder ->
@@ -47,6 +85,7 @@ class GoogleMatter(
     }
 
     fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        Log.d("MATTER ","ACTIVITY RESULT "+requestCode+" "+resultCode)
         // Send the status
         when (resultCode) {
             null -> {
