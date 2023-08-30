@@ -44,6 +44,17 @@ class GoogleMatterFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
                 }
                 googleMatter.commissionDevice()
             }
+            "shareDevice" -> {
+                if (!this::googleMatter.isInitialized) {
+                    googleMatter = GoogleMatter(activity!!, result)
+                }
+                val args = call.arguments as List<*>
+                val productId: Int = args[0] as Int
+                val vendorId: Int = args[1] as Int
+                val discriminator: Int = args[2] as Int
+                val passCode: Long = args[3] as Long
+                googleMatter.shareDevice(activity!!,productId,vendorId,discriminator,passCode)
+            }
             "getDeviceData" -> {
                 val args = call.arguments as List<*>
                 val deviceId: Long = args[0] as Long
