@@ -24,41 +24,41 @@ import chip.devicecontroller.ChipDeviceController
  */
 abstract class BaseCompletionListener : ChipDeviceController.CompletionListener {
     override fun onConnectDeviceComplete() {
-        print("BaseCompletionListener onConnectDeviceComplete()")
+        MatterLog.d("BaseCompletionListener onConnectDeviceComplete()")
     }
 
     override fun onStatusUpdate(status: Int) {
-        print("BaseCompletionListener onStatusUpdate(): status [${status}]")
+        MatterLog.d("BaseCompletionListener onStatusUpdate(): status [${status}]")
     }
 
     override fun onPairingComplete(code: Int) {
-        print("BaseCompletionListener onPairingComplete(): code [${code}]")
+        MatterLog.d("BaseCompletionListener onPairingComplete(): code [${code}]")
     }
 
     override fun onPairingDeleted(code: Int) {
-        print("BaseCompletionListener onPairingDeleted(): code [${code}]")
+        MatterLog.d("BaseCompletionListener onPairingDeleted(): code [${code}]")
     }
 
     override fun onCommissioningComplete(nodeId: Long, errorCode: Int) {
-        print(
+        MatterLog.d(
             "BaseCompletionListener onCommissioningComplete(): nodeId [${nodeId}] errorCode [${errorCode}]"
         )
     }
 
     override fun onNotifyChipConnectionClosed() {
-        print("BaseCompletionListener onNotifyChipConnectionClosed()")
+        MatterLog.d("BaseCompletionListener onNotifyChipConnectionClosed()")
     }
 
     override fun onCloseBleComplete() {
-        print("BaseCompletionListener onCloseBleComplete()")
+        MatterLog.d("BaseCompletionListener onCloseBleComplete()")
     }
 
     override fun onError(error: Throwable) {
-        print("BaseCompletionListener onError(): $error")
+        MatterLog.d("BaseCompletionListener onError(): $error")
     }
 
     override fun onOpCSRGenerationComplete(csr: ByteArray) {
-        print("BaseCompletionListener onOpCSRGenerationComplete() csr [${csr}]")
+        MatterLog.d("BaseCompletionListener onOpCSRGenerationComplete() csr [${csr}]")
     }
 
     override fun onReadCommissioningInfo(
@@ -67,13 +67,13 @@ abstract class BaseCompletionListener : ChipDeviceController.CompletionListener 
         wifiEndpointId: Int,
         threadEndpointId: Int
     ) {
-        print(
+        MatterLog.d(
             "onReadCommissioningInfo: vendorId [${vendorId}]  productId [${productId}]  wifiEndpointId [${wifiEndpointId}] threadEndpointId [${threadEndpointId}]"
         )
     }
 
     override fun onCommissioningStatusUpdate(nodeId: Long, stage: String?, errorCode: Int) {
-        print(
+        MatterLog.d(
             "onCommissioningStatusUpdate nodeId [${nodeId}]  stage [${stage}]  errorCode [${errorCode}]"
         )
     }

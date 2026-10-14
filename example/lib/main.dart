@@ -10,7 +10,7 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -165,7 +165,11 @@ class _MyAppState extends State<MyApp> {
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                         if (!isCommissioningInProgress)
+                          // Demonstrates the legacy polling stream still works for anyone
+                          // migrating gradually; new code should prefer the capability-specific
+                          // getters shown in _CapabilitiesSection below.
                           StreamBuilder<bool?>(
+                              // ignore: deprecated_member_use
                               stream: snapshot.data![index].listenToEvents(),
                               builder: (context, snapshot) {
                                 return Text(
@@ -173,6 +177,8 @@ class _MyAppState extends State<MyApp> {
                                   style: Theme.of(context).textTheme.bodyLarge,
                                 );
                               }),
+                        const SizedBox(height: 8),
+                        _CapabilitiesSection(device: snapshot.data![index]),
                       ],
                     ),
                   ),
@@ -203,7 +209,7 @@ class _MyAppState extends State<MyApp> {
                 isCommissioningInProgress = false;
               });
 
-              print('Failed to get Commissioning: $ex');
+              debugPrint('Failed to get Commissioning: $ex');
             }
           },
         ),
@@ -214,5 +220,106 @@ class _MyAppState extends State<MyApp> {
   shareMatterDevice(MatterDevice matterDevice, int passCode) async {
     await _googleMatterFlutterPlugin.shareDevice(matterDevice.deviceId,
         matterDevice.vendorId, matterDevice.describeContents, passCode);
+  }
+}
+
+/// Demonstrates the spec-driven capability discovery API: queries the device for its supported
+/// clusters, then shows relevant quick-actions for whichever capabilities it reports.
+class _CapabilitiesSection extends StatefulWidget {
+  final MatterDevice device;
+
+  const _CapabilitiesSection({required this.device});
+
+  @override
+  State<_CapabilitiesSection> createState() => _CapabilitiesSectionState();
+}
+
+class _CapabilitiesSectionState extends State<_CapabilitiesSection> {
+  bool _isLoading = false;
+  Set<MatterCapability>? _capabilities;
+
+  Future<void> _discover() async {
+    setState(() => _isLoading = true);
+    try {
+      await widget.device.discoverEndpoints();
+      setState(() => _capabilities = widget.device.capabilities);
+    } catch (ex) {
+      // Discovery can fail if the device is offline or unreachable; surface it via a snackbar
+      // rather than crashing the whole list.
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Discovery failed: $ex')));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final capabilities = _capabilities;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: _isLoading ? null : _discover,
+              icon: _isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.search),
+              label: const Text('Discover capabilities'),
+            ),
+          ],
+        ),
+        if (capabilities != null)
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final capability in capabilities)
+                Chip(label: Text(capability.name)),
+              if (capabilities.isEmpty) const Chip(label: Text('none found')),
+            ],
+          ),
+        if (capabilities != null) ...[
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 8,
+            children: [
+              if (capabilities.contains(MatterCapability.onOff))
+                ElevatedButton(
+                  onPressed: () => widget.device.toggleOnOff(),
+                  child: const Text('Toggle on/off'),
+                ),
+              if (capabilities.contains(MatterCapability.doorLock)) ...[
+                ElevatedButton(
+                  onPressed: () => widget.device.lockDoor(),
+                  child: const Text('Lock'),
+                ),
+                ElevatedButton(
+                  onPressed: () => widget.device.unlockDoor(),
+                  child: const Text('Unlock'),
+                ),
+              ],
+              if (capabilities.contains(MatterCapability.windowCovering)) ...[
+                ElevatedButton(
+                  onPressed: () => widget.device.openWindowCovering(),
+                  child: const Text('Open'),
+                ),
+                ElevatedButton(
+                  onPressed: () => widget.device.closeWindowCovering(),
+                  child: const Text('Close'),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
   }
 }

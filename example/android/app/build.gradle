@@ -26,21 +26,21 @@ apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    compileSdk 33
-    ndkVersion flutter.ndkVersion
+    namespace "com.google.google_matter_flutter.google_matter_flutter_example"
+    compileSdk 34
+    ndkVersion "25.1.8937393"
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
-        main.jniLibs.srcDirs = ['third_party/connectedhomeip/libs/jniLibs']
     }
 
     defaultConfig {
@@ -48,7 +48,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
         minSdk 27
-        targetSdk 33
+        targetSdk 34
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
@@ -70,13 +70,9 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 
     // Home Mobile SDK
-    implementation 'com.google.android.gms:play-services-base:18.1.0'
+    implementation 'com.google.android.gms:play-services-base:18.2.0'
 
-    // Native libs
-    implementation fileTree(dir: "third_party/connectedhomeip/libs", include: ["*.jar", "*.so"])
-
-    // Proto DataStore, used to persist app data. Datastore Repositories and Serializers are stored in java/data, including schemas for devices and user preferences. To learn more about DataStore, refer to Working with Proto DataStore.
-    implementation "androidx.datastore:datastore:1.0.0"
-    implementation 'androidx.datastore:datastore-core:1.0.0'
-    implementation 'com.google.protobuf:protobuf-javalite:3.21.1'
+    // Matter Android Demo SDK (replaces the old manually bundled third_party/connectedhomeip
+    // native binaries - see plugin android/build.gradle for details).
+    implementation 'com.google.matter:matter-android-demo-sdk:1.0'
 }

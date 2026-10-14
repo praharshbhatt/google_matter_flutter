@@ -1,18 +1,19 @@
 name: google_matter_flutter
-description: Flutter plugin for getting implementing Google's Matter SDKs on Android
-version: 0.0.1
+description: >-
+  A Flutter plugin for commissioning, discovering and controlling Matter smart home devices
+  on Android via Google's Matter SDK, with a capability-based Dart API.
+version: 0.2.0
 repository: https://github.com/praharshbhatt/google_matter_flutter
 homepage: https://github.com/praharshbhatt/google_matter_flutter
 
 environment:
-  sdk: '>=2.18.5 <3.0.0'
-  flutter: ">=2.5.0"
+  sdk: '>=2.18.5 <4.0.0'
+  flutter: ">=3.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  plugin_platform_interface: ^2.1.3
-  shared_preferences: ^2.0.17
+  plugin_platform_interface: ^2.1.7
 
 dev_dependencies:
   flutter_test:

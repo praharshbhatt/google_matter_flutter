@@ -18,8 +18,6 @@ package com.google.google_matter_flutter.google_matter_flutter.chip
 
 import chip.devicecontroller.ChipClusters
 import chip.devicecontroller.ChipStructs
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
@@ -35,44 +33,43 @@ data class DeviceMatterInfo(
     val clientClusters: List<Any>
 )
 
-/** Singleton to facilitate access to Clusters functionality. */
-@Singleton
-class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
+/** Facilitates access to Clusters functionality, delegating to the shared [ChipClient]. */
+class ClustersHelper(private val chipClient: ChipClient) {
 
     // -----------------------------------------------------------------------------------------------
     // Convenience functions
 
     /** Fetches MatterDeviceInfo for each endpoint supported by the device. */
     suspend fun fetchDeviceMatterInfo(nodeId: Long, endpoint: Int): List<DeviceMatterInfo> {
-        print("fetchDeviceMatterInfo(): nodeId [${nodeId}]")
+        MatterLog.d("fetchDeviceMatterInfo(): nodeId [${nodeId}]")
         val matterDeviceInfoList = arrayListOf<DeviceMatterInfo>()
         val connectedDevicePtr =
             try {
                 chipClient.getConnectedDevicePointer(nodeId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.")
+                MatterLog.d("Can't get connectedDevicePointer.")
                 return emptyList()
             }
 
         val partsListAttribute =
             readDescriptorClusterPartsListAttribute(connectedDevicePtr, endpoint)
-        print("partsListAttribute [${partsListAttribute}]")
+        MatterLog.d("partsListAttribute [${partsListAttribute}]")
 
         // For each part (endpoint)
         partsListAttribute?.forEach { part ->
-            print("part [$part] is [${part.javaClass}]")
+            MatterLog.d("part [$part] is [${part.javaClass}]")
             val endpointInt =
                 when (part) {
                     is Int -> part.toInt()
                     else -> return@forEach
                 }
-            print("Processing part [$part]")
+            MatterLog.d("Processing part [$part]")
 
             // DeviceListAttribute
             val deviceListAttribute =
                 readDescriptorClusterDeviceListAttribute(connectedDevicePtr, endpointInt)
             val types = arrayListOf<Long>()
-            deviceListAttribute.forEach { types.add(it.type) }
+            deviceListAttribute.forEach { types.add(it.deviceType) }
 
             // ServerListAttribute
             val serverListAttribute =
@@ -243,7 +240,7 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
             try {
                 chipClient.getConnectedDevicePointer(deviceId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.")
+                MatterLog.d("Can't get connectedDevicePointer.")
                 return emptyList()
             }
         return suspendCoroutine { continuation ->
@@ -276,13 +273,13 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
             try {
                 chipClient.getConnectedDevicePointer(deviceId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.")
+                MatterLog.d("Can't get connectedDevicePointer.")
                 return null
             }
         return suspendCoroutine { continuation ->
             getBasicClusterForDevice(connectedDevicePtr, endpoint)
                 .readVendorIDAttribute(
-                    object : ChipClusters.BasicCluster.VendorIDAttributeCallback {
+                    object : ChipClusters.BasicInformationCluster.VendorIDAttributeCallback {
                         override fun onSuccess(value: Int?) {
                             continuation.resume(value)
                         }
@@ -299,14 +296,14 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
             try {
                 chipClient.getConnectedDevicePointer(deviceId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.")
+                MatterLog.d("Can't get connectedDevicePointer.")
                 return emptyList()
             }
 
         return suspendCoroutine { continuation ->
             getBasicClusterForDevice(connectedDevicePtr, endpoint)
                 .readAttributeListAttribute(
-                    object : ChipClusters.BasicCluster.AttributeListAttributeCallback {
+                    object : ChipClusters.BasicInformationCluster.AttributeListAttributeCallback {
                         override fun onSuccess(values: MutableList<Long>) {
                             continuation.resume(values)
                         }
@@ -321,8 +318,8 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
     private fun getBasicClusterForDevice(
         devicePtr: Long,
         endpoint: Int
-    ): ChipClusters.BasicCluster {
-        return ChipClusters.BasicCluster(devicePtr, endpoint)
+    ): ChipClusters.BasicInformationCluster {
+        return ChipClusters.BasicInformationCluster(devicePtr, endpoint)
     }
 
     // -----------------------------------------------------------------------------------------------
@@ -330,12 +327,12 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
 
     // CODELAB FEATURED BEGIN
     suspend fun toggleDeviceStateOnOffCluster(deviceId: Long, endpoint: Int) {
-        print("toggleDeviceStateOnOffCluster())")
+        MatterLog.d("toggleDeviceStateOnOffCluster())")
         val connectedDevicePtr =
             try {
                 chipClient.getConnectedDevicePointer(deviceId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.")
+                MatterLog.d("Can't get connectedDevicePointer.")
                 return
             }
         return suspendCoroutine { continuation ->
@@ -347,7 +344,7 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
                         }
 
                         override fun onError(ex: Exception) {
-                            print("readOnOffAttribute command failure: $ex")
+                            MatterLog.d("readOnOffAttribute command failure: $ex")
                             continuation.resumeWithException(ex)
                         }
                     })
@@ -355,12 +352,12 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
     }
 
     suspend fun getDeviceStateOnOffCluster(deviceId: Long, endpoint: Int): Boolean? {
-        print("getDeviceStateOnOffCluster())")
+        MatterLog.d("getDeviceStateOnOffCluster())")
         val connectedDevicePtr =
             try {
                 chipClient.getConnectedDevicePointer(deviceId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.")
+                MatterLog.d("Can't get connectedDevicePointer.")
                 return null
             }
         return suspendCoroutine { continuation ->
@@ -372,7 +369,7 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
                         }
 
                         override fun onError(ex: Exception) {
-                            print("readOnOffAttribute command failure: $ex")
+                            MatterLog.d("readOnOffAttribute command failure: $ex")
                             continuation.resumeWithException(ex)
                         }
                     }
@@ -382,12 +379,12 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
 
     // For occupancy sensor
     suspend fun getDeviceStateBitmapCluster(deviceId: Long, endpoint: Int): Int? {
-        print("getDeviceStateOnOffCluster())")
+        MatterLog.d("getDeviceStateOnOffCluster())")
         val connectedDevicePtr =
             try {
                 chipClient.getConnectedDevicePointer(deviceId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.")
+                MatterLog.d("Can't get connectedDevicePointer.")
                 return null
             }
         return suspendCoroutine { continuation ->
@@ -396,11 +393,11 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
                     object : ChipClusters.IntegerAttributeCallback {
                         override fun onSuccess(value: Int) {
                             continuation.resume(value)
-                            print("PIR value: $value")
+                            MatterLog.d("PIR value: $value")
                         }
 
                         override fun onError(ex: Exception) {
-                            print("readOnOffAttribute command failure: $ex")
+                            MatterLog.d("readOnOffAttribute command failure: $ex")
                             continuation.resumeWithException(ex)
                         }
                     }
@@ -410,12 +407,12 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
 
     // For door contact
     suspend fun getDeviceStateBooleanCluster(deviceId: Long, endpoint: Int): Boolean? {
-        print("getDeviceStateOnOffCluster())")
+        MatterLog.d("getDeviceStateOnOffCluster())")
         val connectedDevicePtr =
             try {
                 chipClient.getConnectedDevicePointer(deviceId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.")
+                MatterLog.d("Can't get connectedDevicePointer.")
                 return null
             }
         return suspendCoroutine { continuation ->
@@ -427,7 +424,7 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
                         }
 
                         override fun onError(ex: Exception) {
-                            print("readOnOffAttribute command failure: $ex")
+                            MatterLog.d("readOnOffAttribute command failure: $ex")
                             continuation.resumeWithException(ex)
                         }
                     }
@@ -443,6 +440,407 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
     }
 
     // -----------------------------------------------------------------------------------------------
+    // LevelControlCluster functions (dimmable lights/plugs)
+
+    suspend fun getLevelControlCurrentLevel(deviceId: Long, endpoint: Int): Int? {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return null
+        return suspendCoroutine { continuation ->
+            ChipClusters.LevelControlCluster(connectedDevicePtr, endpoint)
+                .readCurrentLevelAttribute(
+                    object : ChipClusters.LevelControlCluster.CurrentLevelAttributeCallback {
+                        override fun onSuccess(value: Int?) {
+                            continuation.resume(value)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    /** [level] is 0-254 per the Matter Level Control cluster spec. */
+    suspend fun setLevelControlLevel(
+        deviceId: Long,
+        endpoint: Int,
+        level: Int,
+        transitionTimeDs: Int = 0
+    ) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.LevelControlCluster(connectedDevicePtr, endpoint)
+                .moveToLevel(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    },
+                    level,
+                    transitionTimeDs,
+                    0,
+                    0
+                )
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------
+    // ColorControlCluster functions (color/color-temperature lights)
+
+    suspend fun setColorControlHueAndSaturation(
+        deviceId: Long,
+        endpoint: Int,
+        hue: Int,
+        saturation: Int,
+        transitionTimeDs: Int = 0
+    ) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.ColorControlCluster(connectedDevicePtr, endpoint)
+                .moveToHueAndSaturation(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    },
+                    hue,
+                    saturation,
+                    transitionTimeDs,
+                    0,
+                    0
+                )
+        }
+    }
+
+    /** [colorTemperatureMireds] is the mired color temperature (roughly 1,000,000 / kelvin). */
+    suspend fun setColorControlTemperature(
+        deviceId: Long,
+        endpoint: Int,
+        colorTemperatureMireds: Int,
+        transitionTimeDs: Int = 0
+    ) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.ColorControlCluster(connectedDevicePtr, endpoint)
+                .moveToColorTemperature(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    },
+                    colorTemperatureMireds,
+                    transitionTimeDs,
+                    0,
+                    0
+                )
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------
+    // DoorLockCluster functions
+
+    suspend fun lockDoor(deviceId: Long, endpoint: Int, pinCode: ByteArray? = null) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.DoorLockCluster(connectedDevicePtr, endpoint)
+                .lockDoor(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    },
+                    java.util.Optional.ofNullable(pinCode),
+                    0
+                )
+        }
+    }
+
+    suspend fun unlockDoor(deviceId: Long, endpoint: Int, pinCode: ByteArray? = null) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.DoorLockCluster(connectedDevicePtr, endpoint)
+                .unlockDoor(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    },
+                    java.util.Optional.ofNullable(pinCode),
+                    0
+                )
+        }
+    }
+
+    /** Returns the DoorLock cluster's LockState attribute (1 = Locked, 2 = Unlocked, etc). */
+    suspend fun getDoorLockState(deviceId: Long, endpoint: Int): Int? {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return null
+        return suspendCoroutine { continuation ->
+            ChipClusters.DoorLockCluster(connectedDevicePtr, endpoint)
+                .readLockStateAttribute(
+                    object : ChipClusters.DoorLockCluster.LockStateAttributeCallback {
+                        override fun onSuccess(value: Int?) {
+                            continuation.resume(value)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------
+    // WindowCoveringCluster functions
+
+    /** Fully opens the window covering (0% lift position). */
+    suspend fun openWindowCovering(deviceId: Long, endpoint: Int) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.WindowCoveringCluster(connectedDevicePtr, endpoint)
+                .upOrOpen(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    /** Fully closes the window covering (100% lift position). */
+    suspend fun closeWindowCovering(deviceId: Long, endpoint: Int) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.WindowCoveringCluster(connectedDevicePtr, endpoint)
+                .downOrClose(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    /** [liftPercent100ths] is 0-10000 (0 = fully open, 10000 = fully closed). */
+    suspend fun setWindowCoveringLiftPosition(deviceId: Long, endpoint: Int, liftPercent100ths: Int) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.WindowCoveringCluster(connectedDevicePtr, endpoint)
+                .goToLiftPercentage(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    },
+                    liftPercent100ths
+                )
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------
+    // ThermostatCluster functions
+
+    suspend fun getThermostatLocalTemperature(deviceId: Long, endpoint: Int): Int? {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return null
+        return suspendCoroutine { continuation ->
+            ChipClusters.ThermostatCluster(connectedDevicePtr, endpoint)
+                .readLocalTemperatureAttribute(
+                    object : ChipClusters.ThermostatCluster.LocalTemperatureAttributeCallback {
+                        override fun onSuccess(value: Int?) {
+                            continuation.resume(value)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    /** [heatingSetpointCelsiusX100] is in hundredths of a degree Celsius, e.g. 2100 = 21.00C. */
+    suspend fun setThermostatHeatingSetpoint(
+        deviceId: Long,
+        endpoint: Int,
+        heatingSetpointCelsiusX100: Int
+    ) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.ThermostatCluster(connectedDevicePtr, endpoint)
+                .writeOccupiedHeatingSetpointAttribute(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    },
+                    heatingSetpointCelsiusX100
+                )
+        }
+    }
+
+    /** [coolingSetpointCelsiusX100] is in hundredths of a degree Celsius, e.g. 2400 = 24.00C. */
+    suspend fun setThermostatCoolingSetpoint(
+        deviceId: Long,
+        endpoint: Int,
+        coolingSetpointCelsiusX100: Int
+    ) {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return
+        return suspendCoroutine { continuation ->
+            ChipClusters.ThermostatCluster(connectedDevicePtr, endpoint)
+                .writeOccupiedCoolingSetpointAttribute(
+                    object : ChipClusters.DefaultClusterCallback {
+                        override fun onSuccess() {
+                            continuation.resume(Unit)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    },
+                    coolingSetpointCelsiusX100
+                )
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------
+    // Sensor cluster functions (read-only measurements)
+
+    /** TemperatureMeasurement cluster; result is hundredths of a degree Celsius. */
+    suspend fun getTemperatureMeasurement(deviceId: Long, endpoint: Int): Int? {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return null
+        return suspendCoroutine { continuation ->
+            ChipClusters.TemperatureMeasurementCluster(connectedDevicePtr, endpoint)
+                .readMeasuredValueAttribute(
+                    object :
+                        ChipClusters.TemperatureMeasurementCluster.MeasuredValueAttributeCallback {
+                        override fun onSuccess(value: Int?) {
+                            continuation.resume(value)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    /** RelativeHumidityMeasurement cluster; result is hundredths of a percent (0-10000). */
+    suspend fun getRelativeHumidityMeasurement(deviceId: Long, endpoint: Int): Int? {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return null
+        return suspendCoroutine { continuation ->
+            ChipClusters.RelativeHumidityMeasurementCluster(connectedDevicePtr, endpoint)
+                .readMeasuredValueAttribute(
+                    object :
+                        ChipClusters.RelativeHumidityMeasurementCluster.MeasuredValueAttributeCallback {
+                        override fun onSuccess(value: Int?) {
+                            continuation.resume(value)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    /** IlluminanceMeasurement cluster; result is in Lux (encoded per spec, 10000*log10(lux)+1). */
+    suspend fun getIlluminanceMeasurement(deviceId: Long, endpoint: Int): Int? {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return null
+        return suspendCoroutine { continuation ->
+            ChipClusters.IlluminanceMeasurementCluster(connectedDevicePtr, endpoint)
+                .readMeasuredValueAttribute(
+                    object :
+                        ChipClusters.IlluminanceMeasurementCluster.MeasuredValueAttributeCallback {
+                        override fun onSuccess(value: Int?) {
+                            continuation.resume(value)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    /** PressureMeasurement cluster; result is in kPa. */
+    suspend fun getPressureMeasurement(deviceId: Long, endpoint: Int): Int? {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return null
+        return suspendCoroutine { continuation ->
+            ChipClusters.PressureMeasurementCluster(connectedDevicePtr, endpoint)
+                .readMeasuredValueAttribute(
+                    object : ChipClusters.PressureMeasurementCluster.MeasuredValueAttributeCallback {
+                        override fun onSuccess(value: Int?) {
+                            continuation.resume(value)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    /** FlowMeasurement cluster; result is in tenths of m/h. */
+    suspend fun getFlowMeasurement(deviceId: Long, endpoint: Int): Int? {
+        val connectedDevicePtr = getConnectedDevicePtrOrNull(deviceId) ?: return null
+        return suspendCoroutine { continuation ->
+            ChipClusters.FlowMeasurementCluster(connectedDevicePtr, endpoint)
+                .readMeasuredValueAttribute(
+                    object : ChipClusters.FlowMeasurementCluster.MeasuredValueAttributeCallback {
+                        override fun onSuccess(value: Int?) {
+                            continuation.resume(value)
+                        }
+
+                        override fun onError(ex: Exception) {
+                            continuation.resumeWithException(ex)
+                        }
+                    })
+        }
+    }
+
+    private suspend fun getConnectedDevicePtrOrNull(deviceId: Long): Long? {
+        return try {
+            chipClient.getConnectedDevicePointer(deviceId)
+        } catch (e: IllegalStateException) {
+            MatterLog.d("Can't get connectedDevicePointer.")
+            null
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------
     // Administrator Commissioning Cluster (11.19)
 
     suspend fun openCommissioningWindowAdministratorCommissioningCluster(
@@ -455,12 +853,12 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
         salt: ByteArray,
         timedInvokeTimeoutMs: Int
     ) {
-        print("openCommissioningWindowAdministratorCommissioningCluster())")
+        MatterLog.d("openCommissioningWindowAdministratorCommissioningCluster())")
         val connectedDevicePtr =
             try {
                 chipClient.getConnectedDevicePointer(deviceId)
             } catch (e: IllegalStateException) {
-                print("Can't get connectedDevicePointer.: $e")
+                MatterLog.d("Can't get connectedDevicePointer.: $e")
                 return
             }
 
@@ -476,7 +874,7 @@ class ClustersHelper @Inject constructor(private val chipClient: ChipClient) {
                         }
 
                         override fun onError(ex: java.lang.Exception?) {
-                            print("getAdministratorCommissioningClusterForDevice.openCommissioningWindow command failure: $ex")
+                            MatterLog.d("getAdministratorCommissioningClusterForDevice.openCommissioningWindow command failure: $ex")
                             continuation.resumeWithException(ex!!)
                         }
                     },

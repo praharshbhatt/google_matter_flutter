@@ -31,16 +31,30 @@ import chip.platform.NsdManagerServiceBrowser
 import chip.platform.NsdManagerServiceResolver
 import chip.platform.PreferencesConfigurationManager
 import chip.platform.PreferencesKeyValueStoreManager
-import dagger.hilt.android.qualifiers.ApplicationContext
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-/** Singleton to interact with the CHIP APIs. */
-@Singleton
-class ChipClient @Inject constructor(@ApplicationContext context: Context) {
+/**
+ * Wrapper around the CHIP/Matter device controller APIs.
+ *
+ * Constructing one of these loads the native CHIP JNI library and spins up platform services
+ * (BLE manager, mDNS resolver/browser, key-value store, ...), so it's relatively expensive. Use
+ * [getInstance] to obtain the shared, process-wide instance instead of constructing it directly
+ * on every call, so repeated reads/actions on a device don't redo that setup each time.
+ */
+class ChipClient private constructor(context: Context) {
+
+    companion object {
+        @Volatile
+        private var instance: ChipClient? = null
+
+        /** Returns the shared [ChipClient], creating it on first use. */
+        fun getInstance(context: Context): ChipClient =
+            instance ?: synchronized(this) {
+                instance ?: ChipClient(context.applicationContext).also { instance = it }
+            }
+    }
 
     /* 0xFFF4 is a test vendor ID, replace with your assigned company ID */
     private val VENDOR_ID = 0xFFF4
@@ -72,13 +86,13 @@ class ChipClient @Inject constructor(@ApplicationContext context: Context) {
                 nodeId,
                 object : GetConnectedDeviceCallback {
                     override fun onDeviceConnected(devicePointer: Long) {
-                        print("Got connected device pointer")
+                        MatterLog.d("Got connected device pointer")
                         continuation.resume(devicePointer)
                     }
 
                     override fun onConnectionFailure(nodeId: Long, error: Exception) {
                         val errorMessage = "Unable to get connected device with nodeId $nodeId."
-                        print("$errorMessage $error")
+                        MatterLog.d("$errorMessage $error")
                         continuation.resumeWithException(IllegalStateException(errorMessage))
                     }
                 })
@@ -91,7 +105,7 @@ class ChipClient @Inject constructor(@ApplicationContext context: Context) {
         iterations: Long,
         salt: ByteArray
     ): PaseVerifierParams {
-        print(
+        MatterLog.d(
             "computePaseVerifier: devicePtr [${devicePtr}] pinCode [${pinCode}] iterations [${iterations}] salt [${salt}]"
         )
         return chipDeviceController.computePaseVerifier(devicePtr, pinCode, iterations, salt)
@@ -196,11 +210,11 @@ class ChipClient @Inject constructor(@ApplicationContext context: Context) {
         setupPinCode: Long
     ) {
         return suspendCoroutine { continuation ->
-            print("Calling chipDeviceController.openPairingWindowWithPIN")
+            MatterLog.d("Calling chipDeviceController.openPairingWindowWithPIN")
             val callback: OpenCommissioningCallback =
                 object : OpenCommissioningCallback {
                     override fun onError(status: Int, deviceId: Long) {
-                        print(
+                        MatterLog.d(
                             "ShareDevice: awaitOpenPairingWindowWithPIN.onError: status [${status}] device [${deviceId}]"
                         )
                         continuation.resumeWithException(
@@ -215,7 +229,7 @@ class ChipClient @Inject constructor(@ApplicationContext context: Context) {
                         manualPairingCode: String?,
                         qrCode: String?
                     ) {
-                        print(
+                        MatterLog.d(
                             "ShareDevice: awaitOpenPairingWindowWithPIN.onSuccess: deviceId [${deviceId}]"
                         )
                         continuation.resume(Unit)
@@ -236,13 +250,13 @@ class ChipClient @Inject constructor(@ApplicationContext context: Context) {
                 nodeId,
                 object : GetConnectedDeviceCallback {
                     override fun onDeviceConnected(devicePointer: Long) {
-                        print("Got connected device pointer")
+                        MatterLog.d("Got connected device pointer")
                         continuation.resume(devicePointer)
                     }
 
                     override fun onConnectionFailure(nodeId: Long, error: Exception) {
                         val errorMessage = "Unable to get connected device with nodeId $nodeId"
-                        print("$errorMessage $error")
+                        MatterLog.d("$errorMessage $error")
                         continuation.resumeWithException(IllegalStateException(errorMessage))
                     }
                 })

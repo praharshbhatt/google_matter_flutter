@@ -2,14 +2,14 @@ group 'com.google.google_matter_flutter.google_matter_flutter'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.6.10'
+    ext.kotlin_version = '1.9.20'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:7.1.2'
+        classpath 'com.android.tools.build:gradle:8.2.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
@@ -25,44 +25,45 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdkVersion 31
+    namespace 'com.google.google_matter_flutter.google_matter_flutter'
+    compileSdk 34
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'
-        //main.jniLibs.srcDirs = ['src/main/jniLibs']
-        main.jniLibs.srcDirs = ['third_party/connectedhomeip/libs/jniLibs']
+    }
+
+    // Needed so BuildConfig.DEBUG is generated; used to gate verbose logging (see MatterLog.kt)
+    // so this library stays silent in release builds of apps that depend on it.
+    buildFeatures {
+        buildConfig true
     }
 
     defaultConfig {
-        minSdkVersion 16
+        // Matches Build.VERSION_CODES.O_MR1, required by the Matter/Home Mobile SDK APIs used here.
+        minSdkVersion 27
     }
 }
 
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.6.0'
-    implementation 'com.google.android.gms:play-services-home:16.0.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
 
     // Home Mobile SDK
-    implementation 'com.google.android.gms:play-services-base:18.1.0'
+    implementation 'com.google.android.gms:play-services-home:16.0.0'
+    implementation 'com.google.android.gms:play-services-base:18.2.0'
 
-    // Native libs
-    implementation fileTree(dir: "third_party/connectedhomeip/libs", include: ["*.jar", "*.so"])
-
-    // Proto DataStore, used to persist app data. Datastore Repositories and Serializers are stored in java/data, including schemas for devices and user preferences. To learn more about DataStore, refer to Working with Proto DataStore.
-    implementation "androidx.datastore:datastore:1.0.0"
-    implementation 'androidx.datastore:datastore-core:1.0.0'
-    implementation 'com.google.protobuf:protobuf-javalite:3.21.1'
-
-    // Hilt
-//    kapt 'com.google.dagger:hilt-compiler:2.41'
-    implementation 'com.google.dagger:hilt-android:2.41'
+    // Matter Android Demo SDK.
+    // This is the official, Maven-hosted replacement for the old, manually bundled
+    // "third_party/connectedhomeip" native binaries (CHIPController.jar, SetupPayloadParser.jar
+    // and per-ABI .so libs). It's still explicitly a *demo* SDK: no warranty, dev/test only.
+    // See https://github.com/google-home/sample-apps-for-matter-android
+    implementation 'com.google.matter:matter-android-demo-sdk:1.0'
 }

@@ -1,4 +1,5 @@
 import 'package:google_matter_flutter/models/matter_device.dart';
+import 'package:google_matter_flutter/models/matter_endpoint.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import 'google_matter_flutter_method_channel.dart';
@@ -31,4 +32,27 @@ abstract class GoogleMatterFlutterPlatform extends PlatformInterface {
   Future<bool?> getDeviceData(int deviceId, String deviceName) {
     throw UnimplementedError('getDeviceData() has not been implemented.');
   }
+
+  /// Queries the device for its endpoints, device types and supported clusters, so capabilities
+  /// can be derived from the Matter spec rather than guessed from the device's name.
+  Future<List<MatterEndpoint>> discoverDevice(int deviceId) {
+    throw UnimplementedError('discoverDevice() has not been implemented.');
+  }
+
+  /// Generic dispatcher for cluster reads/commands. See [MatterAction] for the supported actions.
+  Future<T?> performClusterAction<T>(
+    String action,
+    int deviceId,
+    int endpoint, [
+    List<dynamic> args = const [],
+  ]) {
+    throw UnimplementedError('performClusterAction() has not been implemented.');
+  }
+
+  /// Opens a new commissioning window and shares the device with another ecosystem/app via
+  /// Google's ShareDevice API.
+  Future<bool?> shareDevice(int productId, int vendorId, int discriminator, int passCode) {
+    throw UnimplementedError('shareDevice() has not been implemented.');
+  }
 }
+

@@ -22,9 +22,9 @@ import android.os.IBinder
 import com.google.android.gms.home.matter.commissioning.CommissioningCompleteMetadata
 import com.google.android.gms.home.matter.commissioning.CommissioningRequestMetadata
 import com.google.android.gms.home.matter.commissioning.CommissioningService
+import com.google.android.gms.home.matter.commissioning.CommissioningService.CommissioningError
 import com.google.google_matter_flutter.google_matter_flutter.chip.ChipClient
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
+import com.google.google_matter_flutter.google_matter_flutter.chip.MatterLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,9 +36,8 @@ import kotlinx.coroutines.launch
  * [com.google.android.gms.home.matter.commissioning.CommissioningRequest] in
  * [../screens.home.HomeViewModel].
  */
-@AndroidEntryPoint
 class AppCommissioningService : Service(), CommissioningService.Callback {
-  private val chipClient: ChipClient = ChipClient(this)
+  private val chipClient: ChipClient = ChipClient.getInstance(this)
 
   private val serviceJob = Job()
   private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
@@ -47,28 +46,28 @@ class AppCommissioningService : Service(), CommissioningService.Callback {
 
   override fun onCreate() {
     super.onCreate()
-    print("onCreate()")
+    MatterLog.d("onCreate()")
     commissioningServiceDelegate = CommissioningService.Builder(this).setCallback(this).build()
   }
 
   override fun onBind(intent: Intent): IBinder {
-    print("onBind(): intent [${intent}]")
+    MatterLog.d("onBind(): intent [${intent}]")
     return commissioningServiceDelegate.asBinder()
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    print("onStartCommand(): intent [${intent}] flags [${flags}] startId [${startId}]")
+    MatterLog.d("onStartCommand(): intent [${intent}] flags [${flags}] startId [${startId}]")
     return super.onStartCommand(intent, flags, startId)
   }
 
   override fun onDestroy() {
     super.onDestroy()
-    print("onDestroy()")
+    MatterLog.d("onDestroy()")
     serviceJob.cancel()
   }
 
   override fun onCommissioningRequested(metadata: CommissioningRequestMetadata) {
-    print(
+    MatterLog.d(
       "*** onCommissioningRequested ***:\n" +
               "\tdeviceDescriptor: " +
               "deviceType [${metadata.deviceDescriptor.deviceType}] " +
@@ -84,26 +83,40 @@ class AppCommissioningService : Service(), CommissioningService.Callback {
     // Generate a device ID
     val deviceId: Long = System.currentTimeMillis()
     serviceScope.launch {
-      print(
-        "Commissioning: App fabric -> ChipClient.establishPaseConnection(): deviceId [${deviceId}]")
-      chipClient.awaitEstablishPaseConnection(
-        deviceId,
-        metadata.networkLocation.ipAddress.hostAddress!!,
-        metadata.networkLocation.port,
-        metadata.passcode)
-      print("Commissioning: App fabric -> ChipClient.commissionDevice(): deviceId [${deviceId}]")
-      chipClient.awaitCommissionDevice(deviceId, null)
+      try {
+        MatterLog.d(
+          "Commissioning: App fabric -> ChipClient.establishPaseConnection(): deviceId [${deviceId}]")
+        chipClient.awaitEstablishPaseConnection(
+          deviceId,
+          metadata.networkLocation.ipAddress.hostAddress!!,
+          metadata.networkLocation.port,
+          metadata.passcode)
+        MatterLog.d("Commissioning: App fabric -> ChipClient.commissionDevice(): deviceId [${deviceId}]")
+        chipClient.awaitCommissionDevice(deviceId, null)
+      } catch (e: Exception) {
+        MatterLog.d("Commissioning: onCommissioningRequested() failed: $e")
+        // No way to determine whether this was ATTESTATION_FAILED or DEVICE_UNREACHABLE.
+        commissioningServiceDelegate
+          .sendCommissioningError(CommissioningError.OTHER)
+          .addOnSuccessListener {
+            MatterLog.d("Commissioning: commissioningServiceDelegate.sendCommissioningError() succeeded")
+          }
+          .addOnFailureListener { e2 ->
+            MatterLog.d("Commissioning: commissioningServiceDelegate.sendCommissioningError() failed: $e2")
+          }
+        return@launch
+      }
 
-      print("Commissioning: Calling commissioningServiceDelegate.sendCommissioningComplete()")
+      MatterLog.d("Commissioning: Calling commissioningServiceDelegate.sendCommissioningComplete()")
       commissioningServiceDelegate
         .sendCommissioningComplete(
           CommissioningCompleteMetadata.builder().setToken(deviceId.toString()).build())
         .addOnSuccessListener {
-          print(
+          MatterLog.d(
             "Commissioning: OnSuccess for commissioningServiceDelegate.sendCommissioningComplete()")
         }
         .addOnFailureListener { ex ->
-          print("Commissioning: Failed to send commissioning complete.:  $ex")
+          MatterLog.d("Commissioning: Failed to send commissioning complete.:  $ex")
         }
     }
   }

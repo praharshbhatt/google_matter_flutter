@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Build
 import androidx.annotation.NonNull
 import androidx.annotation.RequiresApi
-import androidx.appcompat.app.AppCompatActivity
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -27,7 +26,6 @@ class GoogleMatterFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     // Declare Google Matter class
     private lateinit var googleMatter: GoogleMatter
     var activity: android.app.Activity? = null
-    private lateinit var methodCallResult: Result
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "google_matter_flutter")
@@ -36,24 +34,37 @@ class GoogleMatterFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
     @RequiresApi(Build.VERSION_CODES.O_MR1)
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
-        methodCallResult = result
         when (call.method) {
             "commissionDevice" -> {
-                if (!this::googleMatter.isInitialized) {
-                    googleMatter = GoogleMatter(activity!!, result)
+                val currentActivity = activity
+                if (currentActivity == null) {
+                    result.error("commissionDevice", "No foreground activity", null)
+                    return
                 }
+                if (!this::googleMatter.isInitialized) {
+                    googleMatter = GoogleMatter(currentActivity)
+                }
+                googleMatter.methodCallResult = result
                 googleMatter.commissionDevice()
             }
             "shareDevice" -> {
+                val currentActivity = activity
+                if (currentActivity == null) {
+                    result.error("shareDevice", "No foreground activity", null)
+                    return
+                }
                 if (!this::googleMatter.isInitialized) {
-                    googleMatter = GoogleMatter(activity!!, result)
+                    googleMatter = GoogleMatter(currentActivity)
                 }
                 val args = call.arguments as List<*>
                 val productId: Int = args[0] as Int
                 val vendorId: Int = args[1] as Int
                 val discriminator: Int = args[2] as Int
-                val passCode: Long = args[3] as Long
-                googleMatter.shareDevice(activity!!,productId,vendorId,discriminator,passCode)
+                // Matter passcodes are small (<=8 digits), so the standard codec may encode them
+                // as Int32 rather than Int64; use Number to accept either.
+                val passCode: Long = (args[3] as Number).toLong()
+                googleMatter.methodCallResult = result
+                googleMatter.shareDevice(productId, vendorId, discriminator, passCode)
             }
             "getDeviceData" -> {
                 val args = call.arguments as List<*>
@@ -62,11 +73,49 @@ class GoogleMatterFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
 
                 if (!this::googleMatter.isInitialized) {
-                    googleMatter = GoogleMatter(activity!!, result)
+                    googleMatter = GoogleMatter(activity!!)
                 }
-                val deviceData = googleMatter.getDeviceData(activity!!, deviceId, deviceName)
+                // Device offline / unsupported endpoint throws; don't let it escape to the main looper
+                try {
+                    result.success(googleMatter.getDeviceData(activity!!, deviceId, deviceName))
+                } catch (e: Exception) {
+                    result.error("getDeviceData", e.message, null)
+                }
+            }
+            "discoverDevice" -> {
+                val args = call.arguments as List<*>
+                val deviceId: Long = args[0] as Long
 
-                result.success(deviceData)
+                if (!this::googleMatter.isInitialized) {
+                    googleMatter = GoogleMatter(activity!!)
+                }
+                try {
+                    val endpoints = googleMatter.discoverDevice(activity!!, deviceId)
+                    result.success(endpoints)
+                } catch (e: Exception) {
+                    result.error("discoverDevice", e.message, null)
+                }
+            }
+            "performClusterAction" -> {
+                val args = call.arguments as List<*>
+                val action: String = args[0] as String
+                val deviceId: Long = args[1] as Long
+                val endpoint: Int = (args[2] as Number).toInt()
+                @Suppress("UNCHECKED_CAST")
+                val actionArgs: List<Any?> = args.getOrNull(3) as? List<Any?> ?: emptyList()
+
+                if (!this::googleMatter.isInitialized) {
+                    googleMatter = GoogleMatter(activity!!)
+                }
+                try {
+                    val actionResult =
+                        googleMatter.performClusterAction(
+                            activity!!, action, deviceId, endpoint, actionArgs
+                        )
+                    result.success(actionResult)
+                } catch (e: Exception) {
+                    result.error("performClusterAction", e.message, null)
+                }
             }
             else -> {
                 result.notImplemented()
@@ -80,7 +129,8 @@ class GoogleMatterFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
         binding.addActivityResultListener(this)
 
         // Initialize Google Matter class with this activity
-        googleMatter = GoogleMatter(activity!!, methodCallResult)
+        val pending = if (this::googleMatter.isInitialized) googleMatter.methodCallResult else null
+        googleMatter = GoogleMatter(binding.activity, pending)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -90,6 +140,9 @@ class GoogleMatterFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activity = binding.activity
         binding.addActivityResultListener(this)
+        // The activity instance changes on recreation (e.g. fold/unfold), so don't keep the old one
+        val pending = if (this::googleMatter.isInitialized) googleMatter.methodCallResult else null
+        googleMatter = GoogleMatter(binding.activity, pending)
     }
 
     override fun onDetachedFromActivity() {
@@ -98,9 +151,8 @@ class GoogleMatterFlutterPlugin : FlutterPlugin, MethodCallHandler, ActivityAwar
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
         // Send the result status
-        googleMatter.onActivityResult(requestCode, resultCode, data)
-
-        return resultCode == AppCompatActivity.RESULT_OK
+        if (!this::googleMatter.isInitialized) return false
+        return googleMatter.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
